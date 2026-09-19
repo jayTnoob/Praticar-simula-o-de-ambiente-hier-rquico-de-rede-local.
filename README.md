@@ -29,33 +29,36 @@ Para esta etapa, é exigida **apenas a configuração das ligações físicas** 
 
 ## 🗺️ Topologia Implementada
 
-```
-                              [Router0 - 2811]
-                         (2 interfaces FastEthernet)
-                                   |
-                 -----------------------------------
-                 |                                 |
-         [Switch0 - Núcleo] ==(link 4Gbps)== [Switch0(1) - Núcleo]
-                 |  \                       /   |
-                 |   \   (fibra, 2Gbps)    /    |
-                 |    \                   /     |
-                 |     \                 /      |
-     [Switch0(2) - Distribuição]   [Switch0(3) - Distribuição]
-             /        \                    /        \
-      [Switch1]   [Switch2]          [Switch3]   [Switch4]
-        (borda)     (borda)           (borda)     (borda)
-        /    \       /    \            /    \      /  |  \
-     PC0   PC0(3) PC0(2) PC0(1)  Laptop0 Laptop0(3) L0(2) L0(1) Server0
-```
 
-### Camadas da rede
-
-| Camada | Função | Dispositivos |
-|---|---|---|
-| **Núcleo** | Interliga o roteador à rede e concentra o backbone com link preparado para agregação de 4 Gbps | Switch0, Switch0(1) |
-| **Distribuição** | Recebe as conexões de fibra óptica dos switches de núcleo (2 Gbps) e distribui para a borda | Switch0(2), Switch0(3) |
-| **Borda (acesso)** | Conecta diretamente os dispositivos finais, sem redundância | Switch1, Switch2, Switch3, Switch4 |
-| **Dispositivos finais** | Estações de trabalho e servidor conectados por cabo | 4 desktops, 4 notebooks, 1 servidor |
+                                   [Router0 - 2811]
+                              (2x interfaces FastEthernet)
+                                    /              \
+                             Fa0/0 /                \ Fa0/1
+                                  /                  \
+                    +------------------+      +------------------+
+                    |  Switch0         |======|  Switch0(1)      |
+                    |  (Núcleo)        | 4Gbps|  (Núcleo)        |
+                    +------------------+      +------------------+
+                          |        \          /        |
+                          |         \        /         |
+                     fibra|          \      /          |fibra
+                     2Gbps|           \    /           |2Gbps
+                          |            \  /            |
+                          |             \/             |
+                          |             /\             |
+                          |            /  \            |
+                    +------------------+      +------------------+
+                    |  Switch0(2)      |      |  Switch0(3)      |
+                    |  (Distribuição)  |      |  (Distribuição)  |
+                    +------------------+      +------------------+
+                       /            \            /            \
+                      /              \          /              \
+              +-----------+    +-----------+  +-----------+   +-----------+
+              | Switch1   |    | Switch2   |  | Switch3   |   | Switch4   |
+              | (Borda)   |    | (Borda)   |  | (Borda)   |   | (Borda)   |
+              +-----------+    +-----------+  +-----------+   +-----------+
+                /       \        /       \      /       \       /   |    \
+              PC0    PC0(1)   PC0(2)  PC0(3) Laptop0 Laptop0(1) L0(2) L0(3) Server0
 
 ### Dispositivos utilizados
 
@@ -68,6 +71,43 @@ Para esta etapa, é exigida **apenas a configuração das ligações físicas** 
 | Desktops | PC0, PC0(1), PC0(2), PC0(3) | PC-PT |
 | Notebooks | Laptop0, Laptop0(1), Laptop0(2), Laptop0(3) | Laptop-PT |
 | Servidor | Server0 | Server-PT |
+
+---
+
+## 🔌 Tabela de Conexões
+
+### Núcleo, Distribuição e Servidor
+
+| Origem            | Porta  | Cabo   | Porta  | Destino                    |
+|-------------------|--------|--------|--------|----------------------------|
+| SW-NUCLEO-02      | Fa7/1  | Cobre  | Fa0/1  | R-BORDA-WAN (Router 1841)  |
+| SW-NUCLEO-02(1)   | Fa0/1  | Cobre  | Fa0/0  | R-BORDA-WAN (Router 1841)  |
+| SW-NUCLEO-02(1)   | Fa6/1  | Cobre  | Fa0/1  | SW-NUCLEO-02               |
+| SW-NUCLEO-02(1)   | Fa7/1  | Cobre  | Fa8/1  | SW-NUCLEO-02               |
+| SW-NUCLEO-02(1)   | Fa8/1  | Cobre  | Fa9/1  | SW-NUCLEO-02               |
+| SW-NUCLEO-02(1)   | Fa9/1  | Cobre  | Fa6/1  | SW-NUCLEO-02               |
+| SW-NUCLEO-02      | Fa2/1  | Fibra  | Fa4/1  | Switch7                    |
+| SW-NUCLEO-02(1)   | Fa2/1  | Fibra  | Fa5/1  | Switch8                    |
+| Switch7           | Fa5/1  | Fibra  | Fa1/1  | SW-NUCLEO-02               |
+| Switch8           | Fa4/1  | Fibra  | Fa1/1  | SW-NUCLEO-02(1)            |
+| Server1           | Fa0    | Cobre  | Fa5/1  | SW-NUCLEO-02(1)            |
+
+### Acesso (switches de borda para PCs/Laptops)
+
+| Origem    | Porta  | Cabo  | Porta  | Destino  |
+|-----------|--------|-------|--------|----------|
+| Switch8   | Fa0/1  | Cobre | Fa0/1  | Switch9  |
+| Switch8   | Fa1/1  | Cobre | Fa0/3  | Switch10 |
+| Switch7   | Fa0/1  | Cobre | Fa0/3  | Switch11 |
+| Switch7   | Fa1/1  | Cobre | Fa0/3  | Switch12 |
+| PC1       | Fa0    | Cobre | Fa0/2  | Switch9  |
+| PC2       | Fa0    | Cobre | Fa0/3  | Switch9  |
+| PC3       | Fa0    | Cobre | Fa0/1  | Switch10 |
+| PC4       | Fa0    | Cobre | Fa0/2  | Switch10 |
+| Laptop1   | Fa0    | Cobre | Fa0/1  | Switch11 |
+| Laptop2   | Fa0    | Cobre | Fa0/2  | Switch11 |
+| Laptop3   | Fa0    | Cobre | Fa0/1  | Switch12 |
+| Laptop4   | Fa0    | Cobre | Fa0/2  | Switch12 |
 
 ---
 
@@ -107,7 +147,3 @@ Máscara de sub-rede: **255.255.255.0**
 - Cisco Packet Tracer
 
 ---
-
-## 👤 Autor
-
-Atividade desenvolvida como parte da disciplina de **Comutação de Redes**.
